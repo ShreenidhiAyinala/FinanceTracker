@@ -15,6 +15,12 @@ def main_menu():
         print("8. Export to CSV")
         print("9. Clear All Transactions")
         print("10. Save and Exit")
+        print("11. Set Budget")
+        print("12. Check Budget Status")
+        print("13. Generate Trend Analysis")
+        print("14. Generate Category Comparison")
+        print("15. Advanced Search")
+        print("16. Check Notifications")
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -56,6 +62,42 @@ def main_menu():
             tracker.save_data()
             print("Data saved. Exiting program.")
             break
+        elif choice == "11":
+            category = input("Enter category for budget: ")
+            amount = float(input("Enter budget amount: "))
+            period = input("Enter budget period (daily/weekly/monthly): ")
+            tracker.set_budget(category, amount, period)
+        elif choice == "12":
+            tracker.check_budget_status()
+        elif choice == "13":
+            tracker.generate_trend_analysis()
+        elif choice == "14":
+            start_date = input("Enter start date (YYYY-MM-DD): ")
+            end_date = input("Enter end date (YYYY-MM-DD): ")
+            tracker.generate_category_comparison(start_date, end_date)
+        elif choice == "15":
+            print("\n--- Advanced Search ---")
+            start_date = input("Enter start date (YYYY-MM-DD) or press enter to skip: ") or None
+            end_date = input("Enter end date (YYYY-MM-DD) or press enter to skip: ") or None
+            category = input("Enter category or press enter to skip: ") or None
+            tags = input("Enter tags (comma-separated) or press enter to skip: ")
+            tags = tags.split(',') if tags else None
+            min_amount = input("Enter minimum amount or press enter to skip: ")
+            min_amount = float(min_amount) if min_amount else None
+            max_amount = input("Enter maximum amount or press enter to skip: ")
+            max_amount = float(max_amount) if max_amount else None
+
+            results = tracker.advanced_search(start_date, end_date, category, tags, min_amount, max_amount)
+            
+            if results:
+                print("\nSearch Results:")
+                for transaction in results:
+                    print(transaction)
+            else:
+                print("No transactions found matching the search criteria.")
+            pass
+        elif choice == "16":
+            tracker.check_notifications()
         else:
             print("Invalid choice, please try again.")
 

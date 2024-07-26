@@ -1,18 +1,25 @@
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from .transaction import Transaction
+from .budget import Budget
 import os
 import json
 import csv
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from reports.report_generator import generate_report
+from collections import defaultdict
+from bisect import bisect_left, bisect_right, bisect
 
 class FinanceTracker:
     def __init__(self):
         self.transactions = []
         self.recurring_transactions = []
         self.load_data()
+        self.budgets = {}
+        self.date_index = []
+        self.category_index = defaultdict(list)
+        self.amount_index = []
 
     def add_transaction(self, amount=None, category=None, description=None, transaction_type=None, tags=None):
         try:
@@ -32,6 +39,7 @@ class FinanceTracker:
             date = datetime.now().strftime("%Y-%m-%d")
             transaction = Transaction(amount, category, description, date, transaction_type, tags)
             self.transactions.append(transaction)
+            self._update_indexes(transaction)
             print("Transaction added successfully.")
         except ValueError as e:
             print(f"Error adding transaction: {e}")
@@ -62,6 +70,11 @@ class FinanceTracker:
             print("Transaction added successfully.")
         except ValueError as e:
             print(f"Error adding transaction: {e}")
+        
+        def _update_indexes(self, transaction):
+            bisect.insort(self.date_index, (transaction.date, transaction))
+            self.category_index[transaction.category].append(transaction)
+            bisect.insort(self.amount_index, (transaction.amount, transaction))
         
     def view_transactions(self, start_date=None, end_date=None, category=None):
         filtered_transactions = self.transactions
@@ -279,3 +292,96 @@ class FinanceTracker:
     def clear_transactions(self):
         self.transactions = []
         print("All transactions have been cleared.")
+
+    def set_budget(self, category, amount, period='monthly'):
+        self.budgets[category] = Budget(category, amount, period)
+        print(f"Budget set for {category}: ${amount} {period}")
+
+    def check_budget_status(self):
+        current_month = datetime.now().strftime("%Y-%m")
+        for category, budget in self.budgets.items():
+            spent = sum(t.amount for t in self.transactions 
+                        if t.category == category and 
+                        t.transaction_type == 'expense' and 
+                        t.date.startswith(current_month))
+            if budget.is_exceeded(spent):
+                print(f"Budget exceeded for {category}! Spent ${spent:.2f}, Budget: ${budget.amount:.2f}")
+            else:
+                remaining = budget.remaining(spent)
+                print(f"Budget for {category}: ${spent:.2f} spent, ${remaining:.2f} remaining")
+    
+    def generate_trend_analysis(self):
+        dates = [t.date for t in self.transactions]
+        amounts = [t.amount if t.transaction_type == 'income' else -t.amount for t in self.transactions]
+        
+        cumulative_sum = [sum(amounts[:i+1]) for i in range(len(amounts))]
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=dates, y=cumulative_sum, mode='lines', name='Balance Trend'))
+        fig.update_layout(title='Balance Trend Over Time', xaxis_title='Date', yaxis_title='Balance')
+        fig.show()
+
+    def generate_category_comparison(self, start_date, end_date):
+        filtered_transactions = [t for t in self.transactions if start_date <= t.date <= end_date]
+        
+        category_totals = {}
+        for t in filtered_transactions:
+            if t.category not in category_totals:
+                category_totals[t.category] = {'income': 0, 'expense': 0}
+            category_totals[t.category][t.transaction_type] += t.amount
+        
+        categories = list(category_totals.keys())
+        income = [category_totals[cat]['income'] for cat in categories]
+        expenses = [category_totals[cat]['expense'] for cat in categories]
+        
+        fig = go.Figure(data=[
+            go.Bar(name='Income', x=categories, y=income),
+            go.Bar(name='Expenses', x=categories, y=expenses)
+        ])
+        fig.update_layout(title='Category Comparison', barmode='group')
+        fig.show()
+
+    def advanced_search(self, start_date=None, end_date=None, category=None, tags=None, min_amount=None, max_amount=None):
+        results = set(self.transactions)
+
+        if start_date:
+            start_idx = bisect_left(self.date_index, (start_date, None))
+            results &= set(t for _, t in self.date_index[start_idx:])
+
+        if end_date:
+            end_idx = bisect_right(self.date_index, (end_date, None))
+            results &= set(t for _, t in self.date_index[:end_idx])
+
+        if category:
+            results &= set(self.category_index[category])
+
+        if min_amount is not None:
+            min_idx = bisect_left(self.amount_index, (min_amount, None))
+            results &= set(t for _, t in self.amount_index[min_idx:])
+
+        if max_amount is not None:
+            max_idx = bisect_right(self.amount_index, (max_amount, None))
+            results &= set(t for _, t in self.amount_index[:max_idx])
+
+        if tags:
+            results = [t for t in results if any(tag.lower() in t.tags for tag in tags)]
+
+        return list(results)
+
+    def check_notifications(self):
+        today = datetime.now().date()
+        upcoming_transactions = [t for t, freq in self.recurring_transactions 
+                                 if (freq == 'daily' or 
+                                     (freq == 'weekly' and (today + timedelta(days=7)).weekday() == 0) or
+                                     (freq == 'monthly' and (today + timedelta(days=7)).day == 1))]
+        
+        for transaction in upcoming_transactions:
+            print(f"Upcoming transaction: {transaction} due in the next 7 days")
+
+        for category, budget in self.budgets.items():
+            spent = sum(t.amount for t in self.transactions 
+                        if t.category == category and 
+                        t.transaction_type == 'expense' and 
+                        t.date.startswith(today.strftime("%Y-%m")))
+            if spent > budget.amount * 0.9:  # 90% of budget
+                print(f"Warning: You've spent {spent:.2f} on {category}. Budget limit: {budget.amount}")
