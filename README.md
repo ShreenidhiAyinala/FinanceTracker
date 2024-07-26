@@ -13,21 +13,16 @@ Finance Tracker is a Python-based application for managing personal finances. It
 - Data persistence (save and load functionality)
 
 ## Installation
-1. Clone this repository:
-'''git clone https://github.com/yourusername/cli-finance-tracker.git'''
-2. Navigate to the project directory:
-'''cd cli-finance-tracker'''
-3. Install the required dependencies:
-'''pip install -r requirements.txt'''
+1. Clone this repository: ```git clone https://github.com/yourusername/FinanceTracker.git```
+2. Navigate to the project directory: ```cd FinanceTracker```
+3. Install the required dependencies: ```pip install -r requirements.txt```
 
 ## Usage
-Run the main script to start the finance tracker:
-'''python main.py'''
+Run the main script to start the finance tracker: ```python main.py```
 Follow the on-screen prompts to use various features of the application.
 
 ## Testing
-To run the unit tests:
-'''python -m unittest discover tests'''
+To run the unit tests: ```python -m unittest discover tests```
 
 ## Contributing
 Contributions to improve Finance Tracker are welcome. Please follow these steps:
