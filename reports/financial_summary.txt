@@ -1,0 +1,7 @@
+
+    Financial Summary Report
+    ------------------------
+    Total Income: $100.00
+    Total Expenses: $50.00
+    Net Balance: $50.00
+    
